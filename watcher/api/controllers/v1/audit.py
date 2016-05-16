@@ -60,15 +60,22 @@ class AuditPostType(wtypes.Base):
     state = wsme.wsattr(wtypes.text, readonly=True,
                         default=objects.audit.State.PENDING)
 
+    period = wsme.wsattr(int, mandatory=False)
+
     def as_audit(self):
         audit_type_values = [val.value for val in objects.audit.AuditType]
         if self.type not in audit_type_values:
             raise exception.AuditTypeNotFound(audit_type=self.type)
 
+        if self.type == objects.audit.AuditType.CONTINUOUS.value and \
+           self.period == wtypes.Unset:
+            raise exception.AuditPeriodNotSpecified(audit_type=self.type)
+
         return Audit(
             audit_template_id=self.audit_template_uuid,
             type=self.type,
-            deadline=self.deadline)
+            deadline=self.deadline,
+            period=self.period)
 
 
 class AuditPatchType(types.JsonPatchType):
@@ -151,6 +158,12 @@ class Audit(base.APIBase):
     links = wsme.wsattr([link.Link], readonly=True)
     """A list containing a self link and associated audit links"""
 
+    period = int
+    """Launch audit in this period"""
+
+    next_launch = datetime.datetime
+    """Next launch of continuous audit"""
+
     def __init__(self, **kwargs):
         self.fields = []
         fields = list(objects.Audit.fields)
@@ -178,7 +191,8 @@ class Audit(base.APIBase):
         if not expand:
             audit.unset_fields_except(['uuid', 'type', 'deadline',
                                        'state', 'audit_template_uuid',
-                                       'audit_template_name'])
+                                       'audit_template_name', 'period',
+                                       'next_launch'])
 
         # The numeric ID should not be exposed to
         # the user, it's internal only.
@@ -206,7 +220,9 @@ class Audit(base.APIBase):
                      deadline=None,
                      created_at=datetime.datetime.utcnow(),
                      deleted_at=None,
-                     updated_at=datetime.datetime.utcnow())
+                     updated_at=datetime.datetime.utcnow(),
+                     period=7200,
+                     next_launch=datetime.datetime.utcnow())
         sample._audit_template_uuid = '7ae81bb3-dec3-4289-8d6c-da80bd8001ae'
         return cls._convert_with_links(sample, 'http://localhost:9322', expand)
 
@@ -372,8 +388,9 @@ class AuditsController(rest.RestController):
 
         # trigger decision-engine to run the audit
 
-        dc_client = rpcapi.DecisionEngineAPI()
-        dc_client.trigger_audit(context, new_audit.uuid)
+        if new_audit.type == objects.audit.AuditType.ONESHOT.value:
+            dc_client = rpcapi.DecisionEngineAPI()
+            dc_client.trigger_audit(context, new_audit.uuid)
 
         return Audit.convert_with_links(new_audit)
 

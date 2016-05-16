@@ -695,6 +695,10 @@ class Connection(api.BaseConnection):
             except exc.NoResultFound:
                 raise exception.AuditNotFound(audit=audit_id)
 
+            if 'next_launch' in values:
+                values['next_launch'] = values['next_launch'].replace(
+                    tzinfo=None)
+
             ref.update(values)
         return ref
 

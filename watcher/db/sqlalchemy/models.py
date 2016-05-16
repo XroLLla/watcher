@@ -16,6 +16,7 @@
 SQLAlchemy models for watcher service
 """
 
+from datetime import datetime
 import json
 
 from oslo_config import cfg
@@ -173,6 +174,8 @@ class Audit(Base):
     deadline = Column(DateTime, nullable=True)
     audit_template_id = Column(Integer, ForeignKey('audit_templates.id'),
                                nullable=False)
+    next_launch = Column(DateTime, nullable=True, default=datetime.utcnow())
+    period = Column(Integer, nullable=True, default=3600)
 
 
 class Action(Base):
