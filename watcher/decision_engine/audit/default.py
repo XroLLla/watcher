@@ -62,23 +62,10 @@ class PeriodicAuditHandler(periodic_task.PeriodicTasks):
     def launch_audits_periodically(self, context):
         audits = audit_objects.Audit.list(context,
                                           filters={'type': 'CONTINUOUS'})
-        completed_audits = []
         for audit in audits:
             launch_audit_at = audit.next_launch.replace(tzinfo=None)
             if datetime.utcnow() > launch_audit_at:
-                completed_audits.append(self.executor.submit(self.execute,
-                                                             audit.uuid,
-                                                             context))
-
-        for future in futures.as_completed(completed_audits):
-            audit_uuid = future.result()
-            ap_filters = {'audit_uuid': audit_uuid,
-                          'state': action_plan.State.RECOMMENDED}
-            action_plans = action_plan.ActionPlan.list(context,
-                                                       filters=ap_filters)
-            for plan in action_plans:
-                applier_client = rpcapi.ApplierAPI()
-                applier_client.launch_action_plan(context, plan.uuid)
+                self.executor.submit(self.execute, audit.uuid, context)
 
 
 class DefaultAuditHandler(base.BaseAuditHandler):
@@ -128,6 +115,7 @@ class DefaultAuditHandler(base.BaseAuditHandler):
         return audit
 
     def execute(self, audit_uuid, request_context):
+        audit = None
         try:
             LOG.debug("Trigger audit %s", audit_uuid)
             # change state of the audit to ONGOING
@@ -148,4 +136,5 @@ class DefaultAuditHandler(base.BaseAuditHandler):
             self.update_audit_state(request_context, audit_uuid,
                                     audit_objects.State.FAILED)
         finally:
-            self.update_audit_next_launch(request_context, audit_uuid)
+            if audit.type == 'CONTINUOUS':
+                self.update_audit_next_launch(request_context, audit_uuid)

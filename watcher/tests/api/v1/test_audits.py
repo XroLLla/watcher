@@ -435,7 +435,7 @@ class TestPost(api_base.FunctionalTest):
         audit_dict = post_get_test_audit(state=objects.audit.State.PENDING)
         del audit_dict['uuid']
         del audit_dict['state']
-
+        del audit_dict['next_launch']
         response = self.post_json('/audits', audit_dict)
         self.assertEqual('application/json', response.content_type)
         self.assertEqual(201, response.status_int)
@@ -475,6 +475,7 @@ class TestPost(api_base.FunctionalTest):
         audit_dict = post_get_test_audit()
         del audit_dict['uuid']
         del audit_dict['state']
+        del audit_dict['next_launch']
         # Make the audit template UUID some garbage value
         audit_dict['audit_template_uuid'] = (
             '01234567-8910-1112-1314-151617181920')
@@ -495,6 +496,7 @@ class TestPost(api_base.FunctionalTest):
         state = audit_dict['state']
         del audit_dict['uuid']
         del audit_dict['state']
+        del audit_dict['next_launch']
         with mock.patch.object(self.dbapi, 'create_audit',
                                wraps=self.dbapi.create_audit) as cn_mock:
             response = self.post_json('/audits', audit_dict)
@@ -510,7 +512,7 @@ class TestPost(api_base.FunctionalTest):
         audit_dict = post_get_test_audit()
         del audit_dict['uuid']
         del audit_dict['state']
-
+        del audit_dict['next_launch']
         response = self.post_json('/audits', audit_dict)
         self.assertEqual('application/json', response.content_type)
         self.assertEqual(201, response.status_int)
@@ -524,6 +526,7 @@ class TestPost(api_base.FunctionalTest):
             audit_dict = post_get_test_audit(state=objects.audit.State.PENDING)
             del audit_dict['uuid']
             del audit_dict['state']
+            del audit_dict['next_launch']
             response = self.post_json('/audits', audit_dict)
             de_mock.assert_called_once_with(mock.ANY, response.json['uuid'])
 

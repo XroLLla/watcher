@@ -67,7 +67,7 @@ class TestAuditObject(base.DbTestCase):
                                autospec=True) as mock_create_audit:
             mock_create_audit.return_value = self.fake_audit
             audit = objects.Audit(self.context, **self.fake_audit)
-
+            print audit
             audit.create()
             mock_create_audit.assert_called_once_with(self.fake_audit)
             self.assertEqual(self.context, audit._context)
