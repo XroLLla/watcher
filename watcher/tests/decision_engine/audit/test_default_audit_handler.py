@@ -78,6 +78,16 @@ class TestDefaultAuditHandler(base.DbTestCase):
         audit = audit_objects.Audit.get_by_uuid(self.context, self.audit.uuid)
         self.assertEqual(prev_next_launch, audit.next_launch)
 
+    def test_update_audit_next_launch_continuous_type(self):
+        audit_handler = default.PeriodicAuditHandler(mock.MagicMock())
+        audit = audit_objects.Audit.get_by_uuid(self.context, self.audit.uuid)
+        audit.type = 'CONTINUOUS'
+        audit.save()
+        prev_next_launch = audit.next_launch
+        audit_handler.execute(self.audit.uuid, self.context)
+        audit = audit_objects.Audit.get_by_uuid(self.context, self.audit.uuid)
+        self.assertNotEqual(prev_next_launch, audit.next_launch)
+
 
 class TestPeriodicAuditHandler(base.DbTestCase):
     def setUp(self):
@@ -89,14 +99,6 @@ class TestPeriodicAuditHandler(base.DbTestCase):
             self.context,
             audit_template_id=audit_template.id,
             type="CONTINUOUS")
-
-    def test_update_audit_next_launch_continuous_type(self):
-        audit_handler = default.PeriodicAuditHandler(mock.MagicMock())
-        audit = audit_objects.Audit.get_by_uuid(self.context, self.audit.uuid)
-        prev_next_launch = audit.next_launch
-        audit_handler.execute(self.audit.uuid, self.context)
-        audit = audit_objects.Audit.get_by_uuid(self.context, self.audit.uuid)
-        self.assertNotEqual(prev_next_launch, audit.next_launch)
 
     def test_launch_audits_periodically(self):
         audit_handler = default.PeriodicAuditHandler(mock.MagicMock())
